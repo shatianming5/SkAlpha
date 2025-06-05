@@ -86,6 +86,7 @@ class LoopBase:
         self.loop_idx = 0  # current loop index
         self.step_idx = 0  # the index of next step to be run
         self.loop_prev_out = {}  # the step results of current loop
+        self.final_results = {}  # 保存最终结果，不会被清空
         self.loop_trace = defaultdict(list[LoopTrace])  # the key is the number of loop
         self.session_folder = logger.log_trace_path / "__session__"
 
@@ -139,16 +140,25 @@ class LoopBase:
                 # index increase and save session
                 self.step_idx = (self.step_idx + 1) % len(self.steps)
                 if self.step_idx == 0:  # reset to step 0 in next round
+                    # 在清空前保存当前轮次的最终结果
+                    self.final_results = self.loop_prev_out.copy()
                     self.loop_idx += 1
                     self.loop_prev_out = {}
                     pbar.reset()  # reset the progress bar for the next loop
-                self.dump(self.session_folder / f"{li}" / f"{si}_{name}")  # save a snapshot after the session
+                self.dump(self.session_folder / f"{li}" / f"{si}_{name}")
                 
                 if stop_event is not None and stop_event.is_set():
                     # break
                     raise Exception("Mining stopped by user")
-                    
-                
+    
+    def get_final_results(self):
+        """
+        获取最终结果，优先返回final_results，如果为空则返回当前loop_prev_out
+        """
+        if self.final_results:
+            return self.final_results
+        return self.loop_prev_out
+
     def dump(self, path: str | Path):
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)

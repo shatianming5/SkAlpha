@@ -551,8 +551,10 @@ class QMTDataLoader(BaoStockLoader):
             xt_trader.start()
             connect_result = xt_trader.connect()
             if connect_result != 0:
-                import sys
-                sys.exit('xtquant链接失败，请手动登录xtminiqmt后再重试，程序即将退出 %d' % connect_result)
+                print(f'xtquant链接失败，连接结果: {connect_result}')
+                print('QMT数据源不可用，将使用缓存数据或返回空结果')
+                # 不退出程序，而是抛出异常让上层处理
+                raise ConnectionError(f'QMT连接失败，连接结果: {connect_result}')
 
 
         if isinstance(code, str):

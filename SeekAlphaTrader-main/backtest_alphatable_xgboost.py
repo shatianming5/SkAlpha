@@ -39,19 +39,18 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
     output_manager = OutputManager()
     
     try:
-    train_start_time = date_split['train_start_time']
-    train_end_time = date_split['train_end_time']
-    val_start_time = date_split['val_start_time']
-    val_end_time = date_split['val_end_time']
-    test_start_time = date_split['test_start_time']
-    test_end_time = date_split['test_end_time']
-
-    assert test_end_time <= datetime.datetime.now().strftime('%Y-%m-%d'), '测试结束时间不能大于当前时间'
+        train_start_time = date_split['train_start_time']
+        train_end_time = date_split['train_end_time']
+        val_start_time = date_split['val_start_time']
+        val_end_time = date_split['val_end_time']
+        test_start_time = date_split['test_start_time']
+        test_end_time = date_split['test_end_time']
 
     # 加载策略参数，根据用户选择的股票池获取对应股票指数的数据集ID
     action_manager = ActionManager(**kwargs)
 
     try:
+        assert test_end_time <= datetime.datetime.now().strftime('%Y-%m-%d'), '测试结束时间不能大于当前时间'
         backtest_start_time = pd.to_datetime(train_start_time)
         backtest_end_time = pd.to_datetime(test_end_time)
 
@@ -328,6 +327,27 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
         })
         
         return results_to_save
+        
+    except Exception as e:
+        print(f"回测执行过程中发生错误: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # 返回默认的错误结果
+        return {
+            'test_ic': 0.0,
+            'test_rank_ic': 0.0,
+            'info_ratio': 0.0,
+            'averaged_annualized_roi': 0.0,
+            'sharpe_ratio': 0.0,
+            'max_drawdown': 0.0,
+            'monthly_win_rate': 0.0,
+            'overall_trading_win_rate': 0.0,
+            'turnover': 0.0,
+            'algorithm_volatility': 0.0,
+            'error': str(e)
+        }
+        
     finally:
         # 清理临时文件
         if 'output_manager' in locals():

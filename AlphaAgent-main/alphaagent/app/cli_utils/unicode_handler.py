@@ -3,6 +3,30 @@ Unicode字符处理器
 """
 
 import sys
+import re
+
+
+def replace_unicode_chars(text):
+    """
+    替换Unicode字符为ASCII安全的标记
+    
+    Args:
+        text: 输入文本
+        
+    Returns:
+        str: 处理后的文本
+    """
+    if not isinstance(text, str):
+        text = str(text)
+    
+    # 简单处理：保留中文和常见字符，移除emoji等特殊字符
+    try:
+        # 移除emoji和其他特殊Unicode字符，但保留中文
+        cleaned_text = re.sub(r'[^\u4e00-\u9fff\u0020-\u007E\u00A0-\u00FF]', '', text)
+        return cleaned_text
+    except Exception:
+        # 如果处理失败，返回ASCII安全版本
+        return text.encode('ascii', 'ignore').decode('ascii')
 
 
 def safe_print(message, msg_type="INFO"):
