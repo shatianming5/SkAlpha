@@ -1,0 +1,13 @@
+pandas
+numpy
+mlforecast
+lightgbm
+xgboost
+statsforecast
+baostock
+tqdm
+scikit-learn
+matplotlib
+seaborn
+ta-lib
+requests

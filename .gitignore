@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+build/
+dist/
+.eggs/
+*.pyc
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.spyderproject
+.spyproject
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Project specific
+log/
+logs/
+*.log
+pickle_cache/
+git_ignore_folder/
+test_output/
+outputs/
+temp/
+tmp/
+
+# Data files (可能很大)
+*.csv
+*.xlsx
+*.xls
+*.h5
+*.hdf5
+*.parquet
+*.pkl
+*.pickle
+
+# 但保留重要的配置和示例文件
+!example*.csv
+!sample*.csv
+!config*.csv
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Cache
+.cache/
+*.cache
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# AlphaAgent specific (嵌入的git仓库)
+AlphaAgent-main/.git/
+AlphaAgent-main/qlib/
+
+# SeekAlpha outputs
+figures/
+results/
+因子明细.zip 

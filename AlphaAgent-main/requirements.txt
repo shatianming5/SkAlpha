@@ -1,0 +1,54 @@
+# Requirements for runtime.
+pydantic-settings
+
+python-Levenshtein
+filelock
+loguru
+fire
+fuzzywuzzy
+openai
+
+scikit-learn==1.6.1
+xgboost==3.0.0
+catboost==1.2.8
+torch>=1.7.0
+torchvision
+torchaudio
+
+numpy>=1.24.0 # we use numpy as default data format. So we have to install numpy
+pandas>=1.5.3 # we use pandas as default data format. So we have to install pandas
+pandarallel # parallelize pandas
+matplotlib
+langchain
+langchain-community
+tiktoken
+pymupdf  # Extract shotsreens from pdf
+
+# PDF related
+pypdf
+azure-ai-formrecognizer
+
+# factor implementations
+tables
+
+# CI Fix Tool
+tree-sitter-python
+tree-sitter
+
+python-dotenv
+
+# infrastructure related.
+docker
+
+# demo related
+streamlit
+plotly
+st-theme
+
+# kaggle crawler
+selenium
+kaggle
+nbformat
+
+# tool
+seaborn
