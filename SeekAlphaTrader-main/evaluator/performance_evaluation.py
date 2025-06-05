@@ -815,7 +815,12 @@ class PerformanceEvaluator:
                 # 停牌的若之前有持仓，卖出
                 portfolio[np.isnan(deal_price_data.iloc[i])] = 0
 
-                print(f"日期：{date} 本期待持仓股票数量：{(portfolio != 0).sum()}")
+                # 记录调仓信息（避免重复输出）
+                if hasattr(self, '_last_rebalance_log') and self._last_rebalance_log != date:
+                    self._last_rebalance_log = date
+                elif not hasattr(self, '_last_rebalance_log'):
+                    self._last_rebalance_log = date
+                    print(f"开始回测，首次调仓日期：{date}，持仓股票数量：{(portfolio != 0).sum()}")
                 
                 # 加减仓
                 to_hold = np.where(action_manager.position == portfolio)[0]

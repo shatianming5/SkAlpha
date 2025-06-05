@@ -134,9 +134,10 @@ class DataLoader:
 
                 self.all_data[stock_code] = df.loc[(train_start_time <= df['Date']) & (df['Date'] <= test_end_time)]
 
-                print(f"{stock_code} loaded.")
+                # 数据加载进度信息已在主程序中统一管理
+                pass
 
-        print(f"{len(self.all_data)} stocks are loaded.")
+        # 数据加载完成信息已在主程序中统一输出
         all_dates = sorted(set().union(*[data['Date'] for data in self.all_data.values()]))
         for stock, data in self.all_data.items():
             data.set_index('Date', inplace=True)
@@ -210,7 +211,7 @@ class BaoStockLoader:
         if file_name in os.listdir(f'{self.data_dir}/pv_data'):
             # print(f'{self.data_dir}/{code}_{start_date}_{end_date}.csv loaded.')
             data = pd.read_csv(f'{self.data_dir}/pv_data/{file_name}', index_col='date')
-            print(f'{self.data_dir}/pv_data/{file_name} loaded.')
+            # 数据文件加载信息已在主程序中统一管理
             return data
         else:
             # 获取个股数据
@@ -239,7 +240,7 @@ class BaoStockLoader:
             data = data.apply(lambda x: pd.to_numeric(x, errors='coerce'))
             os.makedirs(os.path.dirname(f'{self.data_dir}/pv_data/{file_name}'), exist_ok=True)
             data.to_csv(f'{self.data_dir}/pv_data/{file_name}')
-            print(f'{self.data_dir}/pv_data/{file_name} saved.')
+            # 数据文件保存信息已在主程序中统一管理
             return data
 
     def load_hsi300(self, date=None):
@@ -265,8 +266,9 @@ class BaoStockLoader:
     def load_zz500_stocks(self, date=""):
         
         rs = bs.query_zz500_stocks(date=date)
-        print('query_zz500 error_code:'+rs.error_code)
-        print('query_zz500  error_msg:'+rs.error_msg)
+        # 查询错误信息已在主程序中统一处理
+        if rs.error_code != '0':
+            raise Exception(f'查询中证500成分股失败，错误信息：{rs.error_msg}')
 
         # 打印结果集
         zz500_stocks = []
@@ -304,12 +306,12 @@ class BaoStockLoader:
     
     def load_index_stocklist_timerange(self, index_name: str, start_date: datetime, end_date: datetime, use_cache=True):
         json_file = '{}/constituent_stocks/{}_{}_{}.json'.format(self.data_dir, index_name.split('.')[1], start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
-        print(f'开始加载{index_name}成分股列表，{start_date.strftime("%Y-%m-%d")}至{end_date.strftime("%Y-%m-%d")}')
+        # 成分股列表加载信息已在主程序中统一管理
 
         if use_cache and os.path.exists(json_file):
             constituent_stock_codes = json.load(open(json_file))
             constituent_stock_codes = {pd.to_datetime(k): v for k, v in constituent_stock_codes.items()}
-            print(f'{index_name}成分股列表加载完成，共{len(constituent_stock_codes)}个成分股。')
+            # 成分股列表加载完成信息已在主程序中统一输出
             return constituent_stock_codes
         
         else:

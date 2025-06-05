@@ -8,6 +8,9 @@ data_baostock/
 data_qmt/
 outputs/
 
+# 统一输出目录
+git_ignore_folder/
+
 # 环境文件
 .env
 .env.*

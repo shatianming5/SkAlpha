@@ -24,10 +24,9 @@ from portfolio_manager.portfolio_management import AlphaGPTPortfolioManager
 from evaluator.performance_evaluation import PerformanceEvaluator
 from test.visualization import draw_figures
 from portfolio_manager.action_management import ActionManager
-from data_manager.zip_files import zip_files
+from output_manager import OutputManager
 from expr_parser import parse_expression
 from function_lib import *
-import pdb
 
 def calculate_ic(y_true, y_pred):
     return np.corrcoef(y_true, y_pred)[0,1]
@@ -36,6 +35,10 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
     '''
     回测函数，输入参数为策略参数，输出为回测结果
     '''
+    # 初始化输出管理器
+    output_manager = OutputManager()
+    
+    try:
     train_start_time = date_split['train_start_time']
     train_end_time = date_split['train_end_time']
     val_start_time = date_split['val_start_time']
@@ -71,7 +74,9 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
         )
 
         # 获取指数成分股
+        print(f"正在加载{index_code}成分股列表...")
         constituent_stock_codes = loader.load_index_stocklist_timerange(index_code, backtest_start_time, backtest_end_time)
+        print(f"成分股列表加载完成，共{len(constituent_stock_codes)}个时间点")
 
 
         # 获取指数数据
@@ -83,7 +88,9 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
         ########################
         ###  获取个股行情数据  ###
         ########################
+        print("正在加载个股行情数据...")
         combined_df = loader.load_stock_price_timerange(constituent_stock_codes, backtest_start_time, backtest_end_time, use_cache=True)
+        print(f"行情数据加载完成，共{len(combined_df.index.get_level_values('instrument').unique())}只股票")
 
 
 
@@ -110,6 +117,7 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
         #####################
         ###  因子计算部分  ###
         #####################
+        print("正在计算因子...")
         # 计算其他字段
         combined_df.loc[:, 'return'] = combined_df.loc[:, 'close'].groupby('instrument').shift(0) / combined_df.loc[:, 'close'].groupby('instrument').shift(1) - 1
         
@@ -136,9 +144,12 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
                 expr = expr.replace('$'+col, f"combined_df[\'{col}\']")
             combined_df[feature] = eval(expr)
 
+        print(f"因子计算完成，共计算{len(exprs)}个因子")
+        
         #######################
         ###  ML模型训练推理部分  ###
         #######################
+        print("正在训练机器学习模型...")
 
         # 构建训练feature
         feature_cols = list(exprs.keys()) + list(base_feature.keys())
@@ -222,10 +233,6 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
         train_mse = mean_squared_error(train_y, train_pred)
         val_mse = mean_squared_error(val_y, val_pred)
         test_mse = mean_squared_error(test_y, test_pred)
-        
-        print(f"Train MSE: {train_mse:.6f}")
-        print(f"Validation MSE: {val_mse:.6f}")
-        print(f"Test MSE: {test_mse:.6f}")
 
         # 特征重要性
         importance_dict = model.get_score(importance_type='weight')
@@ -235,17 +242,22 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
             'importance': [importance_dict.get(f, 0) for f in feature_cols]
         })
         feature_importance = feature_importance.sort_values('importance', ascending=False)
-        print("\nTop 10 Important Features:")
-        print(feature_importance.head(10))
 
         # 计算IC
         train_ic = calculate_ic(train_y, train_pred)
         val_ic = calculate_ic(val_y, val_pred)
         test_ic = calculate_ic(test_y, test_pred)
 
-        print(f"\nTrain IC: {train_ic:.4f}")
-        print(f"Validation IC: {val_ic:.4f}")
-        print(f"Test IC: {test_ic:.4f}")
+        # 统一输出模型训练结果（只在最终结果中输出一次）
+        model_results = {
+            'train_mse': train_mse,
+            'val_mse': val_mse, 
+            'test_mse': test_mse,
+            'train_ic': train_ic,
+            'val_ic': val_ic,
+            'test_ic': test_ic,
+            'top_features': feature_importance.head(10)
+        }
 
         # 将预测结果存储为新的DataFrame
         pred_df = pd.DataFrame(index=feature_df.index, columns=['pred'])
@@ -260,6 +272,8 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
         # 对齐index
         alpha_table.index = benchmark_data.loc[test_start_time:test_end_time].index
 
+        print("模型训练完成，正在准备回测数据...")
+        
         ####################
         ##### 回测部分  #####
         ####################
@@ -277,7 +291,9 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
         portfolio_manager = AlphaGPTPortfolioManager(update_freq=kwargs.get('update_freq', 'M'), max_pos_each_stock=kwargs.get('max_pos_each_stock', 0.1))
         performance_evaluator = PerformanceEvaluator()
         # 核心回测函数
+        print("正在执行回测...")
         results = performance_evaluator.backtest_factor_table(alpha_table, deal_price_data, postadj_close, portfolio_manager, action_manager)
+        print("回测执行完成")
 
         results.update({
             'expr': kwargs.get('expr', ''),
@@ -287,31 +303,35 @@ def backtest(exprs:Dict[str, str]=None, date_split:Dict[str, str]=None, **kwargs
         })
 
         # 计算评估指标
+        print("正在计算评估指标...")
         results_to_save = performance_evaluator.calculate_evaluation_metrics(results)
         # action参数也保存，以供复现
         results_to_save.update({k: v for k, v in action_manager.__dict__.items() if not isinstance(v, pd.Series)})
         
-        # 中间结果导出到zip
-        path_alphatable = './outputs'
-        zip_dir = '因子明细'
-        os.makedirs(os.path.join(path_alphatable, zip_dir), exist_ok=True)
-        path_alphatable_csv = os.path.join(path_alphatable,zip_dir ,'因子表.csv')
-        path_trade_signals_csv = os.path.join(path_alphatable,zip_dir, '交易信号.csv')
-        path_position_csv = os.path.join(path_alphatable,zip_dir, '持仓明细.csv')
+        # 使用统一输出管理器保存因子明细数据包
+        print("正在保存因子明细数据...")
+        factor_zip_path = output_manager.create_factor_package(
+            trade_signals_df=results['trade_signals'],
+            portfolios_df=results['total_portfolios'],
+            alpha_table_df=alpha_table
+        )
         
-        results['trade_signals'].to_csv(path_trade_signals_csv)
-        results['total_portfolios'].to_csv(path_position_csv)
-        # alpha_table.to_csv(path_alphatable_csv)
+        # 保存回测报告
+        print("正在保存回测报告...")
+        report_path = output_manager.save_backtest_report(results_to_save)
         
-        csv_paths = [path_alphatable_csv, path_trade_signals_csv, path_position_csv]
-        csv_zipfile_path = os.path.join(path_alphatable, '因子明细.zip')
-        # zip_files(csv_paths, csv_zipfile_path)
+        # 更新结果中的文件路径
+        results_to_save.update({
+            "factor_zip_path": factor_zip_path,
+            "report_path": report_path,
+            "output_manager": output_manager
+        })
         
-        results_to_save.update({"csv_zipfile_path": csv_zipfile_path})
         return results_to_save
     finally:
-        pass
-        # shutil.rmtree(path_alphatable_dir)
+        # 清理临时文件
+        if 'output_manager' in locals():
+            output_manager.clean_temp_files()
         
 
 if __name__ == '__main__':
@@ -354,8 +374,28 @@ if __name__ == '__main__':
         stock_pool='中证500'
         )
 
-    filename = 'results_' + datetime.datetime.today().strftime('%m-%d_%H-%M-%S')
-    draw_figures(results_to_save, filename)
-    text = {k: str(v) for k, v in results_to_save.items() if isinstance(v, float)}
-    print(text)
+    # 获取输出管理器
+    output_manager = results_to_save.get('output_manager')
+    
+    print("正在生成图表...")
+    # 使用统一的输出路径
+    figure_path = output_manager.get_figure_path()
+    draw_figures(results_to_save, figure_path)
+    
+    # 统一输出最终回测结果摘要
+    print("=" * 60)
+    print("回测结果摘要")
+    print("=" * 60)
+    print(f"年化收益率: {results_to_save.get('averaged_annualized_roi', 0)*100:.2f}%")
+    print(f"信息比率: {results_to_save.get('info_ratio', 0):.4f}")
+    print(f"最大回撤: {results_to_save.get('max_drawdown', 0)*100:.2f}%")
+    print(f"总胜率: {results_to_save.get('overall_trading_win_rate', 0)*100:.2f}%")
+    print(f"换手率: {results_to_save.get('turnover', 0)*100:.2f}%")
+    print("=" * 60)
+    
+    # 打印输出文件摘要
+    output_manager.print_output_summary()
+    
+    # 清理旧文件（保留最近7天）
+    output_manager.clean_old_outputs(days_to_keep=7)
     

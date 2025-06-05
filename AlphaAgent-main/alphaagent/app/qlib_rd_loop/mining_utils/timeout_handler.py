@@ -1,38 +1,57 @@
 """
-超时处理器
+超时处理模块
+处理因子挖掘过程中的超时控制
 """
 
 import os
 import threading
 import time
+import signal
+import functools
 from functools import wraps
 from alphaagent.log import logger
+from alphaagent.app.cli_utils import get_timeout
+from alphaagent.app.cli_utils.unicode_handler import safe_print
+
+
+class TimeoutError(Exception):
+    """超时异常"""
+    pass
+
+
+def timeout_handler(signum, frame):
+    """超时信号处理器"""
+    raise TimeoutError("操作超时")
 
 
 def force_timeout():
     """
     强制超时装饰器
+    为函数添加超时控制
     """
     def decorator(func):
-        @wraps(func)
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            from alphaagent.oai.llm_conf import LLM_SETTINGS
-            seconds = LLM_SETTINGS.factor_mining_timeout
+            timeout_seconds = get_timeout()
             
-            def handle_timeout():
-                logger.error(f"强制终止程序执行，已超过{seconds}秒")
-                os._exit(1)  # 使用os._exit强制退出
-
-            # 使用threading.Timer替代signal.alarm，支持Windows
-            timer = threading.Timer(seconds, handle_timeout)
-            timer.start()
-
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                # 取消定时器
-                timer.cancel()
-            return result
+            if timeout_seconds > 0:
+                # 设置超时信号
+                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(timeout_seconds)
+                
+                try:
+                    result = func(*args, **kwargs)
+                    return result
+                except TimeoutError:
+                    safe_print(f"操作超时 ({timeout_seconds}秒)", "TIMEOUT")
+                    raise
+                finally:
+                    # 恢复原始信号处理器
+                    signal.alarm(0)
+                    signal.signal(signal.SIGALRM, old_handler)
+            else:
+                return func(*args, **kwargs)
+        
         return wrapper
     return decorator
 

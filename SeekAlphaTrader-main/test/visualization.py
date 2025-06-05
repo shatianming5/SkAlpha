@@ -720,7 +720,7 @@ def visualize_with_index(stock_data, index_data, results, foldername='', sma_win
     
 
 
-def draw_figures(eval_results: dict=None, foldername: str=None, vis_each_stock: bool=False) -> None:
+def draw_figures(eval_results: dict=None, figure_path: str=None, vis_each_stock: bool=False) -> None:
     xticks = eval_results['date'] # [d.split('T00')[0] for d in 
     xticks_yearmonth = eval_results['xticks_yearmonth']
     expr = eval_results['expr']
@@ -799,8 +799,17 @@ def draw_figures(eval_results: dict=None, foldername: str=None, vis_each_stock: 
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
-    # 保存图表
-    if not os.path.exists(f'./outputs/figures'):
-        os.makedirs(f'./outputs/figures')
-    plt.savefig(f'./outputs/figures/{foldername}.png')
-    print(f'Save the output figure to ./outputs/figures/{foldername}.png')
+    
+    # 保存图表到统一管理的路径
+    if figure_path:
+        # 确保目录存在
+        os.makedirs(os.path.dirname(figure_path), exist_ok=True)
+        plt.savefig(figure_path, dpi=300, bbox_inches='tight')
+        print(f"图表已保存至: {figure_path}")
+    else:
+        # 兼容旧的调用方式
+        if not os.path.exists(f'./git_ignore_folder/figures'):
+            os.makedirs(f'./git_ignore_folder/figures')
+        default_path = f'./git_ignore_folder/figures/backtest_result.png'
+        plt.savefig(default_path, dpi=300, bbox_inches='tight')
+        print(f"图表已保存至: {default_path}")

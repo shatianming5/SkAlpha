@@ -1,62 +1,102 @@
 """
-进度跟踪器
+进度跟踪模块
+跟踪因子挖掘过程的进度
 """
 
 import time
+from typing import Optional
 from alphaagent.app.cli_utils.unicode_handler import safe_print
 
 
 class ProgressTracker:
-    """
-    进度跟踪器
-    """
+    """进度跟踪器"""
     
-    def __init__(self, total_steps=5):
+    def __init__(self, total_steps: int = 5):
+        """
+        初始化进度跟踪器
+        
+        Args:
+            total_steps: 总步骤数
+        """
         self.total_steps = total_steps
         self.current_step = 0
         self.start_time = None
         self.step_times = []
+        self.step_names = []
     
     def start(self):
         """开始跟踪"""
         self.start_time = time.time()
-        safe_print(f"开始因子挖掘流程，总共{self.total_steps}个步骤", "START")
+        self.current_step = 0
+        self.step_times = []
+        self.step_names = []
+        safe_print(f"开始执行 {self.total_steps} 个步骤", "PROGRESS")
     
-    def next_step(self, step_name):
-        """进入下一步"""
+    def next_step(self, step_name: str):
+        """
+        进入下一步
+        
+        Args:
+            step_name: 步骤名称
+        """
+        current_time = time.time()
+        
         if self.current_step > 0:
-            step_duration = time.time() - self.step_start_time
-            self.step_times.append(step_duration)
-            safe_print(f"步骤{self.current_step}完成，耗时: {step_duration:.2f}秒", "OK")
+            # 记录上一步的耗时
+            step_duration = current_time - self.step_times[-1]
+            safe_print(f"步骤 {self.current_step} 完成，耗时: {step_duration:.2f}秒", "PROGRESS")
         
         self.current_step += 1
-        self.step_start_time = time.time()
+        self.step_times.append(current_time)
+        self.step_names.append(step_name)
         
-        progress = (self.current_step / self.total_steps) * 100
-        safe_print(f"步骤{self.current_step}/{self.total_steps}: {step_name} (进度: {progress:.1f}%)", "STEP")
+        progress_percent = (self.current_step / self.total_steps) * 100
+        safe_print(f"[{self.current_step}/{self.total_steps}] ({progress_percent:.1f}%) {step_name}", "PROGRESS")
     
     def complete(self):
         """完成跟踪"""
-        if self.current_step > 0:
-            step_duration = time.time() - self.step_start_time
-            self.step_times.append(step_duration)
+        if self.start_time is None:
+            return
         
-        total_duration = time.time() - self.start_time
-        avg_step_time = sum(self.step_times) / len(self.step_times) if self.step_times else 0
+        end_time = time.time()
+        total_duration = end_time - self.start_time
         
-        safe_print(f"因子挖掘流程完成！", "SUCCESS")
-        safe_print(f"总耗时: {total_duration:.2f}秒", "INFO")
-        safe_print(f"平均每步耗时: {avg_step_time:.2f}秒", "INFO")
+        safe_print("=" * 50, "PROGRESS")
+        safe_print("执行完成！", "PROGRESS")
+        safe_print(f"总耗时: {total_duration:.2f}秒", "PROGRESS")
         
-        # 显示各步骤耗时
-        for i, step_time in enumerate(self.step_times, 1):
-            safe_print(f"步骤{i}耗时: {step_time:.2f}秒", "INFO")
+        if len(self.step_times) > 1:
+            safe_print("各步骤耗时:", "PROGRESS")
+            for i in range(1, len(self.step_times)):
+                step_duration = self.step_times[i] - self.step_times[i-1]
+                step_name = self.step_names[i] if i < len(self.step_names) else f"步骤{i}"
+                safe_print(f"  {step_name}: {step_duration:.2f}秒", "PROGRESS")
+        
+        safe_print("=" * 50, "PROGRESS")
     
-    def get_progress(self):
-        """获取当前进度"""
-        return {
-            'current_step': self.current_step,
-            'total_steps': self.total_steps,
-            'progress_percent': (self.current_step / self.total_steps) * 100,
-            'elapsed_time': time.time() - self.start_time if self.start_time else 0
-        } 
+    def get_elapsed_time(self) -> float:
+        """
+        获取已用时间
+        
+        Returns:
+            已用时间（秒）
+        """
+        if self.start_time is None:
+            return 0.0
+        return time.time() - self.start_time
+    
+    def get_estimated_remaining_time(self) -> Optional[float]:
+        """
+        估算剩余时间
+        
+        Returns:
+            估算剩余时间（秒），如果无法估算则返回None
+        """
+        if self.current_step == 0 or self.start_time is None:
+            return None
+        
+        elapsed = self.get_elapsed_time()
+        avg_time_per_step = elapsed / self.current_step
+        remaining_steps = self.total_steps - self.current_step
+        
+        return avg_time_per_step * remaining_steps 

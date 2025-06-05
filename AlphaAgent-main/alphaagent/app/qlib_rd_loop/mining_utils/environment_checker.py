@@ -1,29 +1,99 @@
 """
-环境检查器
+环境检查模块
+检查因子挖掘运行环境
 """
 
 import os
+import sys
+from pathlib import Path
+from typing import Dict, Any
 from alphaagent.app.cli_utils.unicode_handler import safe_print
 
 
-def check_environment():
+def check_environment() -> Dict[str, Any]:
     """
     检查运行环境
     
     Returns:
-        dict: 环境信息
+        环境信息字典
     """
-    env_info = {
-        'cwd': os.getcwd(),
-        'use_local': os.getenv('USE_LOCAL', '未设置'),
-        'python_path': os.getenv('PYTHONPATH', '未设置'),
-    }
+    env_info = {}
     
-    safe_print("环境检查:", "CHECK")
-    for key, value in env_info.items():
-        safe_print(f"   - {key}: {value}")
+    # 检查Python版本
+    env_info['python_version'] = sys.version
+    safe_print(f"Python版本: {sys.version.split()[0]}", "ENV")
+    
+    # 检查工作目录
+    env_info['working_dir'] = os.getcwd()
+    safe_print(f"工作目录: {os.getcwd()}", "ENV")
+    
+    # 检查关键目录
+    key_dirs = ['log', 'alphaagent', 'git_ignore_folder']
+    env_info['directories'] = {}
+    
+    for dir_name in key_dirs:
+        dir_path = Path(dir_name)
+        exists = dir_path.exists()
+        env_info['directories'][dir_name] = {
+            'exists': exists,
+            'path': str(dir_path.absolute()) if exists else None
+        }
+        status = "存在" if exists else "不存在"
+        safe_print(f"目录 {dir_name}: {status}", "ENV")
+    
+    # 检查环境变量
+    important_vars = ['PATH', 'PYTHONPATH']
+    env_info['env_vars'] = {}
+    
+    for var in important_vars:
+        value = os.environ.get(var)
+        env_info['env_vars'][var] = value
+        if value:
+            safe_print(f"环境变量 {var}: 已设置", "ENV")
+        else:
+            safe_print(f"环境变量 {var}: 未设置", "ENV")
+    
+    # 检查内存使用
+    try:
+        import psutil
+        memory = psutil.virtual_memory()
+        env_info['memory'] = {
+            'total': memory.total,
+            'available': memory.available,
+            'percent': memory.percent
+        }
+        safe_print(f"内存使用: {memory.percent:.1f}% ({memory.available//1024//1024}MB可用)", "ENV")
+    except ImportError:
+        env_info['memory'] = None
+        safe_print("内存信息: 无法获取 (psutil未安装)", "ENV")
     
     return env_info
+
+
+def check_dependencies() -> Dict[str, bool]:
+    """
+    检查关键依赖包
+    
+    Returns:
+        依赖包状态字典
+    """
+    dependencies = {
+        'pandas': False,
+        'numpy': False,
+        'matplotlib': False,
+        'qlib': False,
+        'fire': False
+    }
+    
+    for package in dependencies.keys():
+        try:
+            __import__(package)
+            dependencies[package] = True
+            safe_print(f"依赖包 {package}: 已安装", "DEP")
+        except ImportError:
+            safe_print(f"依赖包 {package}: 未安装", "DEP")
+    
+    return dependencies
 
 
 def validate_data_files():
@@ -48,34 +118,4 @@ def validate_data_files():
         return False
     else:
         safe_print("所有必需的数据文件都存在", "OK")
-        return True
-
-
-def check_dependencies():
-    """
-    检查依赖包
-    
-    Returns:
-        dict: 依赖检查结果
-    """
-    dependencies = {
-        'pandas': False,
-        'numpy': False,
-        'qlib': False,
-        'fire': False,
-        'dotenv': False
-    }
-    
-    for package in dependencies:
-        try:
-            __import__(package)
-            dependencies[package] = True
-        except ImportError:
-            dependencies[package] = False
-    
-    safe_print("依赖检查:", "CHECK")
-    for package, available in dependencies.items():
-        status = "OK" if available else "MISSING"
-        safe_print(f"   - {package}: {status}")
-    
-    return dependencies 
+        return True 
