@@ -16,9 +16,12 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Generic, Optional, TypeVar
 
-import docker
-import docker.models
-import docker.models.containers
+try:
+    import docker
+    import docker.models
+    import docker.models.containers
+except ImportError:
+    docker = None
 from pydantic import BaseModel
 from rich import print
 from rich.console import Console

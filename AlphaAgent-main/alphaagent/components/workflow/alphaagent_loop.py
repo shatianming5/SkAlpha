@@ -21,7 +21,7 @@ from alphaagent.log import logger
 from alphaagent.log.time import measure_time
 from alphaagent.utils.workflow import LoopBase, LoopMeta
 from alphaagent.core.exception import FactorEmptyError
-from alphaagent.utils.factor_export import export_factor_mining_result
+# from alphaagent.utils.factor_export import export_factor_mining_result  # 移除复杂依赖
 import threading
 
 # 导入拆解后的组件

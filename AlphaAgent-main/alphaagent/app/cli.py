@@ -51,9 +51,27 @@ def mine_wrapper(*args, **kwargs):
         sys.stdout.flush()
         raise
 # from alphaagent.app.qlib_rd_loop.model import main as fin_model
-from alphaagent.app.utils.health_check import health_check
-from alphaagent.app.utils.info import collect_info
-from alphaagent.utils.factor_export import FactorExporter
+# 简化依赖，避免复杂导入
+try:
+    from alphaagent.app.utils.health_check import health_check
+except ImportError:
+    def health_check():
+        print("健康检查功能不可用（缺少依赖）")
+
+try:
+    from alphaagent.app.utils.info import collect_info
+except ImportError:
+    def collect_info():
+        print("信息收集功能不可用（缺少依赖）")
+
+try:
+    from alphaagent.utils.factor_export import FactorExporter
+except ImportError:
+    class FactorExporter:
+        def __init__(self, *args, **kwargs):
+            pass
+        def scan_and_export_all_factors(self, *args, **kwargs):
+            print("因子导出功能不可用（缺少依赖）")
 
 
 def ui(port=19899, log_dir="", debug=False):

@@ -137,7 +137,16 @@ class StepExecutor:
         """
         print(f"[STEP5] 步骤5: 正在生成反馈...")
         with logger.tag("ef"):  # evaluate and feedback
-            feedback = self.summarizer.generate_feedback(prev_out["factor_backtest"], self.trace)
+            # 获取最新的假设
+            hypothesis = prev_out.get("factor_propose")
+            if hypothesis is None and len(self.trace.hist) > 0:
+                hypothesis = self.trace.hist[-1][0]  # 获取最后一个假设
+            
+            feedback = self.summarizer.generate_feedback(
+                prev_out["factor_backtest"], 
+                hypothesis, 
+                self.trace
+            )
             logger.log_object(feedback, tag="feedback generation")
         print(f"[OK] 反馈生成完成")
         return feedback 

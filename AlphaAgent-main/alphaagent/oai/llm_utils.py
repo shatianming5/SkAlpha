@@ -16,7 +16,10 @@ from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
-import tiktoken
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
 
 from alphaagent.core.utils import LLM_CACHE_SEED_GEN, SingletonBaseClass
 from alphaagent.log import LogColors
@@ -423,6 +426,9 @@ class APIBackend:
 
         This function attempts to handle several edge cases.
         """
+        if tiktoken is None:
+            logger.warning("tiktoken not available, returning None encoder")
+            return None
 
         # 1) cases
         def _azure_patch(model: str) -> str:
@@ -442,7 +448,8 @@ class APIBackend:
                     return tiktoken.encoding_for_model(patch_func(model))
                 except KeyError:
                     logger.error(f"Failed to get encoder even after patching with {patch_func.__name__}")
-                    raise
+                    logger.warning("Returning None encoder as fallback")
+                    return None
 
     def build_chat_session(
         self,
